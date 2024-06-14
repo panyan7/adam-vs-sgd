@@ -219,7 +219,8 @@ def train(model,
 
                         if sample_iterations is not None:
                             for algorithm in algorithm_list:
-                                print(str(algorithm), sharpness_list[str(algorithm)][-1] / abs(sharpness_list['sgd'][-1]))
+                                print(str(algorithm),
+                                      sharpness_list[str(algorithm)][-1] / abs(sharpness_list['sgd'][-1]))
 
                 if sample_iterations is not None:
                     cur_sample = batch_idx in sample_iterations
@@ -257,7 +258,6 @@ def train(model,
                                 del p_data
 
                             best_step_list[j].append(best_step)
-
                             if print_memory_summary:
                                 print(torch.cuda.memory_summary(abbreviated=True))
                             torch.cuda.empty_cache()
@@ -285,16 +285,12 @@ def train(model,
                     torch.cuda.empty_cache()
 
                 del grads, grads_list, params, params_list
-
                 optimizer.step()
                 optimizer.zero_grad()
-
                 del batch_data
-
                 torch.cuda.empty_cache()
 
             del input_ids, labels, out
-
             torch.cuda.empty_cache()
 
         if sample_iterations is None:
@@ -359,19 +355,15 @@ def train_one_optimizer(model,
 
             if i % grad_accumulation == 0:
                 batch_loss = 0.0
-
             loss1.backward(retain_graph=True)
-
             batch_loss += float(loss1)
 
             if (i+1) % grad_accumulation == 0 or i+1 == len(dataloader):
                 optimizer.step()
                 optimizer.zero_grad()
-
                 torch.cuda.empty_cache()
 
             del input_ids, labels, out
-
             torch.cuda.empty_cache()
 
         loss_list.append(loss)
@@ -488,7 +480,14 @@ def compute_saved_model_sharpness(algorithm_list,
             print(k, sum(vs) / len(vs))
 
 
-def train_robust_smoothness(model, dataloader, num_epochs, lr, grad_accumulation, threshold=2.5, write_log=True, test_batch_size=0):
+def train_robust_smoothness(model,
+                            dataloader,
+                            num_epochs,
+                            lr,
+                            grad_accumulation,
+                            threshold=2.5,
+                            write_log=True,
+                            test_batch_size=0):
     if write_log:
         log_file = open('log_adam.txt', 'w')
         log_file.write(f'lr = {lr}')
@@ -527,15 +526,16 @@ def train_robust_smoothness(model, dataloader, num_epochs, lr, grad_accumulation
             if (i+1) % grad_accumulation == 0 or i+1 == len(dataloader):
                 if (i // grad_accumulation) == (len(dataloader) // grad_accumulation) / 2:
                     batch_id = (i+1) // grad_accumulation
-                    sp_norm, sp_norm_r, fraction_removed = gauss_newton_hessian(model, epoch, (i+1) // grad_accumulation, test_batch)
+                    sp_norm, sp_norm_r, fraction_removed = gauss_newton_hessian(model,
+                                                                                epoch,
+                                                                                (i+1) // grad_accumulation,
+                                                                                test_batch)
                     if write_log:
                         log_file.write(f'Epoch {epoch}, Batch {(i+1) // grad_accumulation}, Loss {batch_loss}\n')
                         log_file.write(f'Smoothness {sp_norm}\n')
                         log_file.write(f'Robust Smoothness {sp_norm_r}\n')
                         log_file.write(f'Fraction Removed {fraction_removed}\n')
-
                     num_calc += 1
-
 
                 parameters_before_update = [p.clone().detach() for p in model.parameters()]
                 optimizer.step()
@@ -551,15 +551,11 @@ def train_robust_smoothness(model, dataloader, num_epochs, lr, grad_accumulation
                     norms.append(norm)
 
                 total_norm += norm / (len(dataloader) / grad_accumulation)
-
                 optimizer.zero_grad()
-
                 torch.cuda.empty_cache()
 
             del input_ids, labels, out
-
             torch.cuda.empty_cache()
-
 
         plt.figure()
         plt.hist(norms, bins=50)
@@ -569,17 +565,12 @@ def train_robust_smoothness(model, dataloader, num_epochs, lr, grad_accumulation
         print(f'Epoch {epoch}, loss {loss}, norm {total_norm}')
         if write_log:
             log_file.write(f'Epoch {epoch}, loss {loss}, norm {total_norm}')
-
         loss_list.append(loss)
         adam_norm_list.append(total_norm)
-
         torch.save(model, f'model/model_adam_{epoch}.pt')
 
     del optimizer
-
     with open('output/adam_norm_list.pkl', 'wb') as f:
         pickle.dump(adam_norm_list, f)
-
     return loss_list, adam_norm_list
-
 

@@ -47,7 +47,6 @@ def compute_hessian(model, batch, parameter_name, image_name):
     plt.colorbar()
     plt.title(image_name)
     plt.savefig('hessian/' + image_name + '_' + parameter_name + '.png')
-
     return hessian
 
 
@@ -94,17 +93,10 @@ def diagonal_hessian(model, batch, image_name, num_samples=1e-4, max_parameter_s
     grads_2_all.sort()
 
     # Plot the result
-    # plt.figure(figsize=(10,10))
     plt.figure()
     plt.scatter(range(len(grads_2_all)), grads_2_all)
     title = image_name
     mean = float(sum(grads_2_all) / len(grads_2_all))
-    # title += '\nmean: ' + str(mean)
-    # title += '\nsum: ' + str(float(sum(grads_2_all)))
-    # title += '\nmax: ' + str(float(max(grads_2_all)))
-    # title += '\nmax/mean: ' + str(float(max(grads_2_all) * len(grads_2_all) / sum(grads_2_all)))
-    # title += '\nsum <= mean: ' + str(float(sum(map(lambda x : x if x <= mean else 0, grads_2_all))))
-    # title += '\nsum <= 10*mean: ' + str(float(sum(map(lambda x : x if x <= 10*mean else 0, grads_2_all))))
     plt.axhline(y=mean, color='r', linestyle='-')
     plt.title(title)
     plt.savefig('hessian/' + image_name + '_' + str(num_samples) + '.png')
@@ -124,10 +116,12 @@ def sample_hessian(model, epoch, batch_id, batch_data):
 
     # Sample random indices
     params = list(model.named_parameters())
-    params = [(n, p) for n, p in model.named_parameters() if 100000 <= parameter_size[n] <= 600000 and 'attention' in n and 'weight' in n]
+    params = [(n, p) for n, p in model.named_parameters() \
+              if 100000 <= parameter_size[n] <= 600000 and 'attention' in n and 'weight' in n]
 
     for n, p in tqdm(params):
-        indices = torch.multinomial(torch.ones_like(p.view(-1)), num_samples=max(int(1e-4 * p.view(-1).shape[0]), 1)).tolist()
+        indices = torch.multinomial(torch.ones_like(p.view(-1)),
+                                    num_samples=max(int(1e-4 * p.view(-1).shape[0]), 1)).tolist()
         grads_2_all = [0.0 for _ in range(len(indices))]
         for batch in batch_data:
             input_ids, labels = batch
@@ -159,9 +153,8 @@ def sample_hessian(model, epoch, batch_id, batch_data):
         title += '\nmax: ' + str(float(max(grads_2_all)))
         title += '\nmax/mean: ' + str(float(max(grads_2_all) * len(grads_2_all) / sum(grads_2_all)))
         title += '\nsum <= mean: ' + str(float(sum(map(lambda x : x if x <= mean else 0, grads_2_all))))
-        title += '\nsum <= 10*mean: ' + str(float(sum(map(lambda x : x if x <= 10*mean else 0, grads_2_all))))
+        title += '\nsum <= 10*mean: ' + str(float(sum(map(lambda x : x if x <= 10 * mean else 0, grads_2_all))))
         plt.axhline(y=mean, color='r', linestyle='-')
-        # plt.title(title)
         plt.title(n)
         plt.savefig('hessian/' + image_name + '.png')
 
@@ -175,12 +168,21 @@ def sample_hessian(model, epoch, batch_id, batch_data):
 
 
 
-def gauss_newton_hessian(model, epoch, batch_id, batch_data, lb_parameter_size=1e5, ub_parameter_size=6e5, keyword='attention', check_sol=False, check_fraction=0.02):
+def gauss_newton_hessian(model,
+                         epoch,
+                         batch_id,
+                         batch_data,
+                         lb_parameter_size=1e5,
+                         ub_parameter_size=6e5,
+                         keyword='attention',
+                         check_sol=False,
+                         check_fraction=0.02):
     parameter_size = compute_parameter_size(model)
 
     softmax = nn.Softmax(dim=1)
     G = []
-    params = [p for n, p in model.named_parameters() if lb_parameter_size <= parameter_size[n] <= ub_parameter_size and keyword in n]
+    params = [p for n, p in model.named_parameters() \
+              if lb_parameter_size <= parameter_size[n] <= ub_parameter_size and keyword in n]
 
     for batch in batch_data:
         model.zero_grad()
@@ -224,16 +226,12 @@ def gauss_newton_hessian(model, epoch, batch_id, batch_data, lb_parameter_size=1
         del G_random
 
     print(f'Smoothness: {sp_norm}')
-
     print(f'Robust smoothness: {sp_norm_r}')
-
     fraction_removed = 1 - G_r.shape[1] / G.shape[1]
     print(f'Fraction removed: {fraction_removed}')
-
     if check_sol:
         print(f'Random smoothness: {sp_norm_random}')
 
     del G, G_r, G_c
-
     return sp_norm, sp_norm_r, fraction_removed
 

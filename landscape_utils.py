@@ -38,12 +38,10 @@ def clip_threshold(grads, threshold, threshold_scale=1):
     """
     threshold *= threshold_scale
     if type(grads) is list:
-        grads_clip = [p * (p.abs() < threshold) \
-                      + torch.sign(p) * (p.abs() >= threshold) * threshold \
+        grads_clip = [p * (p.abs() < threshold) + torch.sign(p) * (p.abs() >= threshold) * threshold \
                       for p in grads]
     elif type(grads) is dict:
-        grads_clip = {n : p * (p.abs() < threshold) \
-                      + torch.sign(p) * (p.abs() >= threshold) * threshold \
+        grads_clip = {n : p * (p.abs() < threshold) + torch.sign(p) * (p.abs() >= threshold) * threshold \
                       for n, p in grads.items()}
     return grads_clip
 
@@ -244,15 +242,6 @@ class LionParams(OptimParams):
         update_step = {}
         for param_name in self.param_names:
             grad = grads_clip[param_name].to(self.device)
-            """
-            if self.params[param_name]['num_iters'] > 1:
-                exp_avg = self.params[param_name]['exp_avg']
-                update = beta1 * exp_avg + (1 - beta1) * grads[param_name]
-                exp_avg = beta2 * exp_avg + (1 - beta2) * grads[param_name]
-            else:
-                update = grads[param_name]
-                exp_avg = grads[param_name]
-            """
             exp_avg = self.params[param_name]['exp_avg']
             update = beta1 * exp_avg + (1 - beta1) * grad
             exp_avg = beta2 * exp_avg + (1 - beta2) * grad
@@ -399,7 +388,6 @@ def search(model,
     plt.figure()
     plt.plot(lr_list, loss_list)
     best_index = np.argmin(loss_list)
-    # plt.title(title + f', Best Distance {lr_list[best_index]}')
     plt.title(title)
     plt.scatter(lr_list[best_index], loss_list[best_index], c='r')
     plt.savefig('output/' + title + '/' + algorithm + '.pdf')
@@ -588,8 +576,8 @@ def check_sharpness(model, optimizer, batch_data):
                 final_hessian[plengths[i]-lengths[i]:plengths[i],
                               plengths[j]-lengths[j]:plengths[j]] = hessian_matrix
                 vhp_test[j] += torch.matmul(update_step[i+1].view(-1),
-                                            hessian[i][j].view(lengths[i], lengths[j])
-                                            ).view(vhp_test[j].shape)
+                                            hessian[i][j].view(lengths[i], lengths[j])) \
+                                    .view(vhp_test[j].shape)
 
         all_grad = torch.hstack(list(map(lambda x: x.reshape(-1),
                                          update_step[1:]))).cuda().detach()
